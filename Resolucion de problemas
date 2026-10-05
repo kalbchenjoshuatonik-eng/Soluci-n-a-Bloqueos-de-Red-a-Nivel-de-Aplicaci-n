@@ -1,0 +1,53 @@
+# 🛠️ Comandos de Diagnóstico y Restablecimiento de Red
+
+Este documento contiene los scripts y comandos rápidos para ejecutar desde la consola de Windows al intentar mitigar bloqueos de red a nivel local, antes de escalar al diagnóstico del hardware (módem/router).
+
+## ⚠️ Prerrequisitos
+Todos los comandos deben ejecutarse en una terminal con **privilegios de Administrador**.
+* **Símbolo del sistema (CMD):** Presiona `Win + R`, escribe `cmd` y presiona `Ctrl + Shift + Enter`.
+* **PowerShell / Terminal:** Presiona `Win + X` y selecciona `Terminal (Administrador)`.
+
+---
+
+## 1. Restablecimiento Completo de la Pila de Red (TCP/IP y Winsock)
+Estos comandos son el primer paso estándar cuando el sistema operativo pierde la capacidad de enrutar el tráfico de aplicaciones específicas (sockets corrompidos).
+
+```cmd
+:: 1. Restablece el catálogo Winsock al estado limpio por defecto
+netsh winsock reset
+
+:: 2. Restablece la pila TCP/IP (IPv4 e IPv6)
+netsh int ip reset
+
+:: 3. Borra la caché de resolución DNS local
+ipconfig /flushdns
+
+(Nota despues de cada comando debe de ser reinciada la PC/Laptop para que los cambios surgan efectos)
+
+Renovación de Concesión DHCP (Fuerza Bruta)
+:: Libera la concesión IPv4 actual
+ipconfig /release
+
+:: Solicita una nueva asignación al router
+ipconfig /renew
+
+Diagnóstico Rápido de Cortafuegos (Firewall)
+Comandos para auditar si el Firewall de Windows Defender está bloqueando silenciosamente el tráfico de salida de aplicaciones de terceros.
+
+:: Muestra todas las reglas activas que están bloqueando tráfico de salida
+netsh advfirewall firewall show rule name=all dir=out action=block
+
+:: (Opcional) Restablece el Firewall a sus políticas de fábrica
+netsh advfirewall reset
+
+Workaround: Spoofing de MAC por Consola (Solo PowerShell)
+Alternativa al método gráfico (Administrador de dispositivos) para cambiar la Dirección MAC lógica del adaptador e invalidar reglas de filtrado en el router.
+
+:: 1. Identificar el nombre exacto del adaptador (ej. "Ethernet" o "Wi-Fi")
+Get-NetAdapter | Format-Table -Property Name, InterfaceDescription, MacAddress
+
+:: 2. Cambiar la MAC (Reemplazar "Ethernet" por el nombre de tu interfaz)
+Set-NetAdapterAdvancedProperty -Name "Ethernet" -RegistryKeyword "NetworkAddress" -RegistryValue "021A2B3C4D5E"
+
+:: 3. Reiniciar el adaptador para aplicar el cambio
+Restart-NetAdapter -Name "Ethernet"
