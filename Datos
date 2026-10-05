@@ -1,0 +1,45 @@
+# Solución a Bloqueos de Red a Nivel de Aplicación (Router vs Extensor)
+
+## Descripción del Problema
+Este repositorio documenta un comportamiento anómalo de red donde una aplicación específica de escritorio pierde por completo la conexión a sus servidores, mientras que el resto del sistema (navegadores web, otras apps) tiene acceso a internet sin problemas. 
+
+La peculiaridad principal de este caso es el comportamiento del hardware de red:
+* **Falla:** Al conectar el equipo directamente al módem principal del ISP (por cable Ethernet o Wi-Fi directo).
+* **Funciona:** Al conectar el equipo a un extensor de red o repetidor anclado al mismo módem principal.
+
+Esto indica que el problema no reside en la computadora ni en el software, sino en un filtro de puertos, una corrupción de la tabla NAT del módem principal, o un bloqueo selectivo de tráfico basado en la topología de la red.
+
+## Entorno de Diagnóstico
+* **Sistema Operativo:** Windows 11 Pro
+* **Adaptador de Red (Cableado):** GbE Family Controller
+* **Tipo de Conexiones Probadas:** Ethernet (Directo), Wi-Fi (Directo), Wi-Fi (Extensor/Repetidor), Datos Móviles (Hotspot).
+
+## Pruebas Realizadas (Descartadas)
+Para llegar a la conclusión de que el problema reside en el módem, se realizaron y descartaron los siguientes diagnósticos a nivel de sistema:
+1. **Limpieza de caché local:** Se borraron los archivos temporales de la aplicación afectada. *(Sin éxito)*.
+2. **Restablecimiento de la pila de red (Winsock/IP):** Ejecución de `netsh winsock reset`, `netsh int ip reset` y `ipconfig /flushdns`. *(Sin éxito)*.
+3. **Modificación de DNS:** Cambio a servidores DNS públicos (Cloudflare 1.1.1.1 / Google 8.8.8.8) para evitar bloqueos del proveedor. *(Sin éxito)*.
+4. **Desactivación de Firewall/Proxy:** Apagado temporal de Windows Defender, antivirus de terceros y revisión de opciones proxy locales (inetcpl.cpl). *(Sin éxito)*.
+5. **Protocolo IPv6:** Desactivación de IPv6 en el adaptador de red para forzar el enrutamiento por IPv4. *(Sin éxito)*.
+6. **Spoofing de Dirección MAC:** Alteración de la dirección física del adaptador GbE (Locally Administered Address) para forzar al módem a reconocer el equipo como un dispositivo nuevo. *(Sin éxito)*.
+
+## Soluciones y Workarounds
+
+Dado que las configuraciones locales de Windows no resuelven el filtro del router, existen tres formas de mitigar o solucionar el bloqueo:
+
+### Opción 1: Enrutamiento por Extensor (Workaround de Hardware)
+Al conectar el equipo al extensor Wi-Fi, el módem principal registra el tráfico bajo la dirección MAC del extensor en lugar de la del equipo. Esto encapsula las peticiones y evade reglas de firewall estrictas asignadas a dispositivos finales.
+* **Pro:** Solución inmediata sin software de terceros.
+* **Contra:** Posible pérdida de ancho de banda y aumento de latencia frente a una conexión Ethernet directa.
+
+### Opción 2: Encapsulamiento de Tráfico (Workaround de Software)
+Usar herramientas de túnel seguro como Cloudflare WARP (1.1.1.1) o una VPN.
+* **Cómo funciona:** Oculta los puertos de destino y el tipo de tráfico de la aplicación, haciendo que el módem principal solo vea una conexión segura genérica de salida.
+* **Pro:** Permite seguir utilizando la máxima velocidad del cable Ethernet directo.
+
+### Opción 3: Disminución del Firewall del Router (Solución Definitiva)
+Acceder al panel de administración local del módem del ISP (generalmente `192.168.1.254` o `192.168.0.1`).
+* **Cómo funciona:** Navegar a los ajustes de Seguridad o Firewall del módem y bajar el nivel de protección de "Alto/Medio" a "Bajo". Muchos ISP configuran filtros predeterminados que bloquean los puertos UDP/TCP específicos que usan las aplicaciones de gran consumo de datos.
+
+## Contribuciones
+Los Pull Requests son bienvenidos. Para cambios importantes, por favor abre un _issue_ primero para discutir qué te gustaría cambiar.
